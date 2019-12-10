@@ -29,7 +29,9 @@ func main() {
     }
     if token == "" {
         token = os.Getenv("DCPFP_TOKEN")
-        token = token[1:len(token)-1] // elide quotes
+        if token[0] == '"' && token[len(token)-1] == '"' {
+            token = token[1:len(token)-1] // elide quotes
+        }
     }
     if token == "" {
         env := "DCPFP_TOKEN"
