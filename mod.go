@@ -13,21 +13,23 @@ import (
 
 var (
     uid, tag, token string
-    prn bool
+    prn, me bool
 )
 
 func main() {
     flag.StringVar(&uid, "t", "", "Target user snowflake")
     flag.StringVar(&tag, "g", "", "Target user tag")
+    flag.BoolVar(&me, "me", false, "Set the user's account as the target")
     flag.StringVar(&token, "T", "", "Authentication token")
     flag.BoolVar(&prn, "p", false, "Print-only")
     flag.Parse()
-    if tag == "" && uid == "" {
+    if tag == "" && uid == "" && !me {
         fmt.Fprintf(os.Stderr, "fatal: no target provided; please provide one of -g or -t\n")
         os.Exit(1)
     }
     if token == "" {
         token = os.Getenv("DCPFP_TOKEN")
+        token = token[1:len(token)-1] // elide quotes
     }
     if token == "" {
         env := "DCPFP_TOKEN"
@@ -40,8 +42,17 @@ func main() {
         os.Exit(2)
     }
     client, err := dgo.New(token)
-    if tag != "" {
-        // emplace uid if none given
+    if uid == "" && me {
+        // set implicit uid of self
+        u, err := client.User("@me")
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "fatal: retrieve @me: %s\n", err)
+            os.Exit(6)
+        }
+        uid = u.ID
+    }
+    if tag != "" && uid == "" {
+        // search for uid if none given or implied
         relations, err := client.RelationshipsGet()
         if err != nil {
             fmt.Fprintf(os.Stderr, "fatal: retrieve relations: %s\n", err)
