@@ -24,7 +24,7 @@ func main() {
     flag.BoolVar(&prn, "p", false, "Print-only")
     flag.Parse()
     if tag == "" && uid == "" && !me {
-        fmt.Fprintf(os.Stderr, "fatal: no target provided; please provide one of -g or -t\n")
+        fmt.Fprintf(os.Stderr, "fatal: no target provided; please provide one of -g, -t, or -me\n")
         os.Exit(1)
     }
     if token == "" {
