@@ -27,10 +27,10 @@ func lev(s, t string) int {
     const substitutionCost = 1
     L := make([][]int, len(s)+1, len(s)+1)
     for i := range L {
-        L[i] = make([]int, len(s)+1, len(s)+1)
+        L[i] = make([]int, len(t)+1, len(t)+1)
     }
-    for i := range s {
-        for j := range t {
+    for i := range L {
+        for j := range L[i] {
             if i == 0 {
                 L[i][j] = j
                 continue
@@ -40,10 +40,10 @@ func lev(s, t string) int {
                 continue
             }
             c := 0
-            if s[i-1] != t[i-1]  {
+            if s[i-1] != t[j-1]  {
                 c = substitutionCost
             }
-            L[i][j] = min(L[i-1][j-1], c, L[i-1][j] + 1, L[i][j-1]+1)
+            L[i][j] = min(L[i-1][j-1] + c, L[i-1][j] + 1, L[i][j-1]+1)
         }
     }
     return L[len(s)][len(t)]
