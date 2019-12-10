@@ -22,14 +22,14 @@ func main() {
     prn := flag.Bool("p", false, "Print-only")
     flag.Parse()
     if *tag == "" && *uid == "" {
-        fmt.Fprintf(os.Stderr, "fatal: no target provided\n")
+        fmt.Fprintf(os.Stderr, "fatal: no target provided; please provide one of -g or -t\n")
         os.Exit(1)
     }
     if *token == "" {
         *token = os.Getenv("DCPFP_TOKEN")
     }
     if *token == "" {
-        fmt.Fprintf(os.Stderr, "fatal: no token provided\n")
+        fmt.Fprintf(os.Stderr, "fatal: no token provided; please set one of -T or $DCPFP_TOKEN\n")
         os.Exit(2)
     }
     client, err := dgo.New(*token)
@@ -41,7 +41,7 @@ func main() {
             os.Exit(3)
         }
         if len(relations) == 0 {
-            fmt.Fprintf(os.Stderr, "fatal: you have no friends >:(\n")
+            fmt.Fprintf(os.Stderr, "fatal: you have no friends ;/\n")
             os.Exit(4)
         }
         // find the Discord nick#tag with the closest Damerau—Levenshtein
