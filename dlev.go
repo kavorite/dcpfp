@@ -22,6 +22,33 @@ func max(a, b int, Z ...int) int {
     }
 }
 
+// Levenshtein distance
+func lev(s, t string) int {
+    const substitutionCost = 1
+    L := make([][]int, len(s)+1, len(s)+1)
+    for i := range L {
+        L[i] = make([]int, len(s)+1, len(s)+1)
+    }
+    for i := range s {
+        for j := range t {
+            if i == 0 {
+                L[i][j] = j
+                continue
+            }
+            if j == 0 {
+                L[i][j] = i
+                continue
+            }
+            c := 0
+            if s[i-1] != t[i-1]  {
+                c = substitutionCost
+            }
+            L[i][j] = min(L[i-1][j-1], c, L[i-1][j] + 1, L[i][j-1]+1)
+        }
+    }
+    return L[len(s)][len(t)]
+}
+
 // Damerau—Levenshtein distance
 func dlev(s, t string) int {
     const (

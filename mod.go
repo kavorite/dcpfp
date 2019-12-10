@@ -58,7 +58,7 @@ func main() {
             uname := relations[i].User.Username
             discriminator := relations[i].User.Discriminator
             ltag := fmt.Sprintf("%s#%s", uname, discriminator)
-            levs[r] = dlev(tag, ltag)
+            levs[r] = lev(tag, ltag)
         }
         sort.Slice(relations, func(i, j int) bool {
             return levs[relations[i]] < levs[relations[j]]
