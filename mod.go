@@ -5,35 +5,42 @@ import (
     "fmt"
     "os"
     "sort"
+    "runtime"
 
     dgo "github.com/bwmarrin/discordgo"
     "github.com/pkg/browser"
-    "github.com/jbowles/disfun"
 )
 
-func dlev(a, b string) int {
-    return disfun.DamerauLevenshtein(a, b)
-}
+var (
+    uid, tag, token string
+    prn bool
+)
 
 func main() {
-    uid := flag.String("t", "", "Target user snowflake")
-    tag := flag.String("g", "", "Target user tag")
-    token := flag.String("T", "", "Authentication token")
-    prn := flag.Bool("p", false, "Print-only")
+    flag.StringVar(&uid, "t", "", "Target user snowflake")
+    flag.StringVar(&tag, "g", "", "Target user tag")
+    flag.StringVar(&token, "T", "", "Authentication token")
+    flag.BoolVar(&prn, "p", false, "Print-only")
     flag.Parse()
-    if *tag == "" && *uid == "" {
+    if tag == "" && uid == "" {
         fmt.Fprintf(os.Stderr, "fatal: no target provided; please provide one of -g or -t\n")
         os.Exit(1)
     }
-    if *token == "" {
-        *token = os.Getenv("DCPFP_TOKEN")
+    if token == "" {
+        token = os.Getenv("DCPFP_TOKEN")
     }
-    if *token == "" {
-        fmt.Fprintf(os.Stderr, "fatal: no token provided; please set one of -T or $DCPFP_TOKEN\n")
+    if token == "" {
+        env := "DCPFP_TOKEN"
+        if runtime.GOOS == "windows" {
+            env = fmt.Sprintf("%%%s%%", env)
+        } else {
+            env = fmt.Sprintf("$%s", env)
+        }
+        fmt.Fprintf(os.Stderr, "fatal: no token provided; please set one of -T or %s\n", env)
         os.Exit(2)
     }
-    client, err := dgo.New(*token)
-    if *tag != "" {
+    client, err := dgo.New(token)
+    if tag != "" {
         // emplace uid if none given
         relations, err := client.RelationshipsGet()
         if err != nil {
@@ -51,25 +58,25 @@ func main() {
             uname := relations[i].User.Username
             discriminator := relations[i].User.Discriminator
             ltag := fmt.Sprintf("%s#%s", uname, discriminator)
-            levs[r] = dlev(*tag, ltag)
+            levs[r] = dlev(tag, ltag)
         }
         sort.Slice(relations, func(i, j int) bool {
             return levs[relations[i]] < levs[relations[j]]
         })
-        *uid = relations[0].User.ID
+        uid = relations[0].User.ID
     }
     if err != nil {
         fmt.Fprintf(os.Stderr, "fatal: login failure: %s\n", err)
         os.Exit(4)
     }
-    u, err := client.User(*uid)
+    u, err := client.User(uid)
     if err != nil {
         fmt.Fprintf(os.Stderr, "fatal: retrieve user: %s\n", err)
         os.Exit(4)
     }
     uri := fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.jpg?size=2048",
         u.ID, u.Avatar)
-    if *prn {
+    if prn {
         fmt.Println(uri)
     } else {
         err := browser.OpenURL(uri)
