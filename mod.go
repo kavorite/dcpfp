@@ -65,7 +65,7 @@ func main() {
             fmt.Fprintf(os.Stderr, "fatal: you have no friends ;/\n")
             os.Exit(4)
         }
-        // find the Discord nick#tag with the closest Levenshtein
+        // find the Discord tag with the closest Levenshtein
         // distance to the search term
         levs := make(map[*dgo.Relationship]int, len(relations))
         for i, r := range relations {

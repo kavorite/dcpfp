@@ -58,7 +58,7 @@ func dlev(s, t string) int {
         rpcCost = 1
     )
     if 2*swpCost < insCost + delCost {
-        panic("unsupportest cost assignment")
+        panic("unsupported cost assignment")
     }
     L := make([][]int, len(s), len(s))
     for i := range L {
