@@ -44,16 +44,17 @@ func main() {
         os.Exit(2)
     }
     client, err := dgo.New(token)
+    var u *dgo.User
     if uid == "" && me {
         // set implicit uid of self
-        u, err := client.User("@me")
+        var err error
+        u, err = client.User("@me")
         if err != nil {
             fmt.Fprintf(os.Stderr, "fatal: retrieve @me: %s\n", err)
             os.Exit(6)
         }
-        uid = u.ID
     }
-    if tag != "" && uid == "" {
+    if tag != "" && uid == "" && u == nil {
         // search for uid if none given or implied
         relations, err := client.RelationshipsGet()
         if err != nil {
@@ -64,7 +65,7 @@ func main() {
             fmt.Fprintf(os.Stderr, "fatal: you have no friends ;/\n")
             os.Exit(4)
         }
-        // find the Discord nick#tag with the closest Damerau—Levenshtein
+        // find the Discord nick#tag with the closest Levenshtein
         // distance to the search term
         levs := make(map[*dgo.Relationship]int, len(relations))
         for i, r := range relations {
@@ -82,10 +83,12 @@ func main() {
         fmt.Fprintf(os.Stderr, "fatal: login failure: %s\n", err)
         os.Exit(4)
     }
-    u, err := client.User(uid)
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "fatal: retrieve user: %s\n", err)
-        os.Exit(4)
+    if u == nil {
+        u, err = client.User(uid)
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "fatal: retrieve user: %s\n", err)
+            os.Exit(4)
+        }
     }
     uri := fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.jpg?size=2048",
         u.ID, u.Avatar)
