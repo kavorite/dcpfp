@@ -6,6 +6,7 @@ import (
     "os"
     "sort"
     "runtime"
+    "hash/fnv"
 
     dgo "github.com/bwmarrin/discordgo"
     "github.com/pkg/browser"
@@ -16,20 +17,56 @@ var (
     prn, me bool
 )
 
+const (
+    opLogin = "auth.keyIn"
+    opReadPassword = "auth.read.credentials"
+    opReadToken = "auth.read.token"
+    opGetRelations = "get.relations"
+    opGetMe = "get.@me"
+    opGetUser = "get.target"
+    opOpenBrowser = "browser.launch"
+)
+
+
+type Err struct {
+    Op string
+    Cause error
+}
+
+func (e Err) Error() string {
+    return fmt.Sprintf("%s: %s", e.Op, e.Cause)
+}
+
+func (e Err) Hash() uint32 {
+    hrx := fnv.New32a()
+    hrx.Write([]byte(e.Error()))
+    return hrx.Sum32()
+}
+
+func (e Err) FCk() {
+    if e.Cause != nil {
+        fmt.Fprintf(os.Stderr, "fatal: %s\n", e.Error())
+        os.Exit(int(e.Hash()))
+    }
+}
+
 func main() {
     flag.StringVar(&uid, "t", "", "Target user snowflake")
     flag.StringVar(&tag, "g", "", "Target user tag")
     flag.BoolVar(&me, "me", false, "Set the user's account as the target")
     flag.StringVar(&token, "T", "", "Authentication token")
     flag.BoolVar(&prn, "p", false, "Print-only")
+    var (
+        client *dgo.Session
+        err error
+    )
     flag.Parse()
     if tag == "" && uid == "" && !me {
-        fmt.Fprintf(os.Stderr, "fatal: no target provided; please provide one of -g, -t, or -me\n")
-        os.Exit(1)
+        Err{opReadToken, fmt.Errorf("no target provided; please provide one of -g, -t, or -me")}.FCk()
     }
     if token == "" {
         token = os.Getenv("DCPFP_TOKEN")
-        if token[0] == '"' && token[len(token)-1] == '"' {
+        if len(token) > 0 && token[0] == '"' && token[len(token)-1] == '"' {
             token = token[1:len(token)-1] // elide quotes
         }
     }
@@ -40,30 +77,25 @@ func main() {
         } else {
             env = fmt.Sprintf("$%s", env)
         }
-        fmt.Fprintf(os.Stderr, "fatal: no token provided; please set one of -T or %s\n", env)
-        os.Exit(2)
+        Err{opReadToken, fmt.Errorf("no token provided; please set one of -T or %s", env)}.FCk()
     }
-    client, err := dgo.New(token)
+    if client == nil {
+        client, err = dgo.New(token)
+        Err{opLogin, err}.FCk()
+    }
     var u *dgo.User
     if uid == "" && me {
-        // set implicit uid of self
+        // set implicit user self
         var err error
         u, err = client.User("@me")
-        if err != nil {
-            fmt.Fprintf(os.Stderr, "fatal: retrieve @me: %s\n", err)
-            os.Exit(6)
-        }
+        Err{opGetMe, err}.FCk()
     }
     if tag != "" && uid == "" && u == nil {
-        // search for uid if none given or implied
+        // search for uid and retrieve user if none given or implied
         relations, err := client.RelationshipsGet()
-        if err != nil {
-            fmt.Fprintf(os.Stderr, "fatal: retrieve relations: %s\n", err)
-            os.Exit(3)
-        }
+        Err{opGetRelations, err}.FCk()
         if len(relations) == 0 {
-            fmt.Fprintf(os.Stderr, "fatal: you have no friends ;/\n")
-            os.Exit(4)
+            Err{opGetRelations, fmt.Errorf("you have no friends ;/")}.FCk()
         }
         // find the Discord tag with the closest Levenshtein
         // distance to the search term
@@ -79,16 +111,9 @@ func main() {
         })
         uid = relations[0].User.ID
     }
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "fatal: login failure: %s\n", err)
-        os.Exit(4)
-    }
     if u == nil {
         u, err = client.User(uid)
-        if err != nil {
-            fmt.Fprintf(os.Stderr, "fatal: retrieve user: %s\n", err)
-            os.Exit(4)
-        }
+        Err{opGetUser, err}.FCk()
     }
     uri := fmt.Sprintf("https://cdn.discordapp.com/avatars/%s/%s.jpg?size=2048",
         u.ID, u.Avatar)
@@ -96,9 +121,6 @@ func main() {
         fmt.Println(uri)
     } else {
         err := browser.OpenURL(uri)
-        if err != nil {
-            fmt.Fprintf(os.Stderr, "failure spawning browser: %s\n", err)
-            os.Exit(5)
-        }
+        Err{opOpenBrowser, err}.FCk()
     }
 }
